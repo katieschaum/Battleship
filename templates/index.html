@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battleship</title>
+</head>
+<body>
+    <div>
+        <label for="username">Username: </label>
+        <input type="text" id="username" placeholder="username">
+    </div>
+    <div>
+        <button id="loginButton">Login</button>
+        <button id="createButton">Create</button>
+    </div>
+    <script>
+        document.getElementById("createButton").addEventListener("click",_=>{
+            fetch("/api/createuser",{
+                method:"POST",
+                headers:{
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: document.getElementById("username").value
+                })
+            }).then(response => {
+                response.json().then(
+                    json => console.log(json)
+                )
+            })
+        })
+    </script>
+</body>
+</html>
