@@ -32,21 +32,47 @@
         td.hit::after {
             content: "X";
         }
+        td.invalid{
+            background-color: orange;
+        }
+        td.target{
+            background-color: green;
+        }
         table {
              border: thick solid black;
+        }
+        .loggedIn #loginPane{
+            display: none;
+        }
+        #gamePane{
+            display: none;
+        }
+        .loggedIn #gamePane{
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div>
-        <label for="username">Username: </label>
-        <input type="text" id="username" placeholder="username">
+    <div id="loginPane">
+        <div>
+            <label for="username">Username: </label>
+            <input type="text" id="username" placeholder="username">
+        </div>
+        <div>
+            <button id="loginButton">Login</button>
+            <button id="createButton">Create</button>
+        </div>
     </div>
-    <div>
-        <button id="loginButton">Login</button>
-        <button id="createButton">Create</button>
-    </div>
-    <div>
+    <div id="gamePane">
+        <div>
+            Player: <span id="playerName"></span>
+        </div>
+        <div id="gameButton">
+            <button id="startGame">Start</button>
+        </div>
+        <div id="winText">
+
+        </div>
         <table id="opponentBoard">
             <thead>
                 <tr>
@@ -352,36 +378,24 @@
             </tbody>
         </table>
     </div>
-    <div>
-        <label for="x">x: </label>
-        <input type="number" name="x" id="x" min="0" max="9" step="1">
-    </div>
-    <div>
-        <label for="y">y: </label>
-        <input type="number" name="y" id="y" min="0" max="9" step="1">
-    </div>
-    <div>
-        <button id="fire">Fire</button>
-    </div>
+    
     <script>
+        const columns = "ABCDEFGHIJ"
+        const playerBoard = document.getElementById("playerBoard")
+        const opponentBoard = document.getElementById("opponentBoard")
         let gameId = -1
-        document.getElementById("fire").addEventListener("click",async _=> {
-            const response = await fetch("/api/makemove", {
-                method:"POST",
-                headers:{
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    row: document.getElementById("y").value,
-                    column: document.getElementById("x").value,
-                    game_id: gameId
-                })
-            })
-            const json = await response.json()
-            console.log(json)
-        })
-        document.getElementById("createButton").addEventListener("click",_=>{
-            fetch("/api/createuser",{
+        let playerId = -1
+        let ships = [5,4,3,3,2]
+        let direction = 1
+        let shipIndex = 0
+        let error = false
+        let lastCell = null
+        let grid = Array.from({length:10}, ()=> new Array(10).fill(0))
+        let playGrid = Array.from({length:10}, ()=> new Array(10).fill(0))
+        let gameState = "PREGAME"
+        
+        document.getElementById("createButton").addEventListener("click", async _=>{
+            const response = await fetch("/api/createuser",{
                 method:"POST",
                 headers:{
                     "Content-Type": "application/json"
@@ -389,11 +403,12 @@
                 body: JSON.stringify({
                     username: document.getElementById("username").value
                 })
-            }).then(response => {
-                response.json().then(
-                    json => console.log(json)
-                )
             })
+
+            const json = await response.json()
+            playerId = json.id
+            document.getElementById("playerName").innerText = json.username
+            document.body.className = "loggedIn"
         })
         document.getElementById("loginButton").addEventListener("click",async _=>{
             const response = await fetch("/api/login",{
@@ -407,32 +422,31 @@
             })
 
             const json = await response.json()
-
+            document.getElementById("playerName").innerText = json.username
+            playerId = json.id
+            document.body.className = "loggedIn"
+        })
+        document.getElementById("startGame").addEventListener("click", async _ =>{
             const startGame = await fetch("/api/startgame", {
                 method: "POST",
                 headers:{
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    user_id: json.id 
+                    user_id: playerId 
                 })
             })
             const startJson = await startGame.json()
-            console.log(startJson)
             gameId = startJson.id
+            document.getElementById("winText").innerText = "Place Your Ships"
+            grid = Array.from({length:10}, ()=> new Array(10).fill(0))
+            playGrid = Array.from({length:10}, ()=> new Array(10).fill(0))
+            gameState = "SETUP"
+            shipIndex = 0
+            for (let cell of document.getElementsByTagName("td")) {
+                cell.className = ""
+            }
         })
-
-        const columns = "ABCDEFGHIJ"
-        let ships = [5,4,3,3,2]
-        let direction = 1
-        let shipIndex = 0
-        let error = false
-        let lastCell = null
-        let grid = Array.from({length:10}, ()=> new Array(10).fill(0))
-        let playGrid = Array.from({length:10}, ()=> new Array(10).fill(0))
-        let gameState = "SETUP"
-        const playerBoard = document.getElementById("playerBoard")
-        const opponentBoard = document.getElementById("opponentBoard")
 
         function setShipCell(cell) {
             let row = parseInt(cell[2])
@@ -477,6 +491,7 @@
                 if (shipIndex >= ships.length){
                     // start game
                     gameState = "PLAY"
+                    document.getElementById("winText").innerText = "Sink the opponents battleship!"
                 }
                 return
             }
@@ -501,6 +516,7 @@
             if (shipIndex >= ships.length){
                 // start game
                 gameState = "PLAY"
+                document.getElementById("winText").innerText = "Sink the opponents battleship!"
             }
         }
         function clearShipCell(cell){
@@ -593,43 +609,22 @@
                         column
                     })
                 }).then(async response => {
-                    /*
-                    return {
-        "player":{
-            "id":player_move.id,
-            "game_id": player_move.game_id,
-            "row": player_move.row,
-            "column": player_move.column,
-            "is_hit": player_move.is_hit,
-            "is_player": player_move.is_player
-        },
-        "ai":{
-            "id":ai_move.id,
-            "game_id": ai_move.game_id,
-            "row": ai_move.row,
-            "column": ai_move.column,
-            "is_hit": ai_move.is_hit,
-            "is_player": ai_move.is_player
-        },
-        "has_player_won": True,
-        "has_ai_won": ai_won
-    }
-    */
-
                     const json = await response.json()
-                    const playerCell = document.getElementById(`p${columns.charAt(json.ai.column)}${json.ai.row}`)
                     const opponentCell = document.getElementById(`o${columns.charAt(json.player.column)}${json.player.row}`)
                     
-                    playerCell.className = json.ai.is_hit ? "hit": (grid[json.ai.row][json.ai.column] > 0 ? "ship" : "miss")
                     opponentCell.className = json.player.is_hit ? "hit": "miss"
                     playGrid[json.player.row][json.player.column] = json.player.is_hit ? 2:1
 
                     if (json.has_player_won){
                         gameState = "PLAYER WON"
+                        document.getElementById("winText").innerText = "YOU WON!!!!"
                         return;
                     }
+                    const playerCell = document.getElementById(`p${columns.charAt(json.ai.column)}${json.ai.row}`)
+                    playerCell.className = json.ai.is_hit ? "hit": (grid[json.ai.row][json.ai.column] > 0 ? "ship" : "miss")
                     if (json.has_ai_won){
                         gameState = "AI WON"
+                        document.getElementById("winText").innerText = "You Have Lost!"
                         return;
                     }
                 })
