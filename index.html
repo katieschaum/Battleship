@@ -609,6 +609,29 @@
                         column
                     })
                 }).then(async response => {
+                    /*
+                    return {
+        "player":{
+            "id":player_move.id,
+            "game_id": player_move.game_id,
+            "row": player_move.row,
+            "column": player_move.column,
+            "is_hit": player_move.is_hit,
+            "is_player": player_move.is_player
+        },
+        "ai":{
+            "id":ai_move.id,
+            "game_id": ai_move.game_id,
+            "row": ai_move.row,
+            "column": ai_move.column,
+            "is_hit": ai_move.is_hit,
+            "is_player": ai_move.is_player
+        },
+        "has_player_won": True,
+        "has_ai_won": ai_won
+    }
+    */
+
                     const json = await response.json()
                     const opponentCell = document.getElementById(`o${columns.charAt(json.player.column)}${json.player.row}`)
                     
